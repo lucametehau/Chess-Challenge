@@ -21,7 +21,7 @@ public class MyBot : IChessBot
     TTEntry[] tt = new TTEntry[entries];
 
     public int getPstVal(int psq) {
-        return (int)((psts[psq / 10] >> (6 * (psq % 10))) & 63);
+        return (int)(((psts[psq / 10] >> (6 * (psq % 10))) & 63) - 20) * 8;
     }
 
     public int Evaluate(Board board) {
@@ -33,14 +33,14 @@ public class MyBot : IChessBot
                 while(mask != 0) {
                     phase += piecePhase[piece];
                     ind = 128 * (piece - 1) + BitboardHelper.ClearAndGetIndexOfLSB(ref mask) ^ (stm == true ? 56 : 0);
-                    mg += getPstVal(ind) * 8 - 160 + pieceVal[piece];
-                    eg += getPstVal(ind + 64) * 8 - 160 + pieceVal[piece];
+                    mg += getPstVal(ind) + pieceVal[piece];
+                    eg += getPstVal(ind + 64) + pieceVal[piece];
                 }
             }
             mg = -mg;
             eg = -eg;
         }
-        
+
         int eval = (mg * phase + eg * (24 - phase)) / 24;
         if(!board.IsWhiteToMove)
             eval *= -1;
@@ -71,7 +71,7 @@ public class MyBot : IChessBot
         int[] scores = new int[moves.Length];
         for(int i = 0; i < moves.Length; i++) {
             if(moves[i] == entry.move) scores[i] = 1000000;
-            else scores[i] = 100 * moves[i].TargetSquare.Index - moves[i].StartSquare.Index;
+            else if(moves[i].IsCapture) scores[i] = 100 * moves[i].TargetSquare.Index - moves[i].StartSquare.Index;
         }
         Move bestMove = Move.NullMove;
         for(int i = 0; i < moves.Length; i++) {
@@ -108,6 +108,7 @@ public class MyBot : IChessBot
     }
     public Move Think(Board board, Timer timer)
     {
+        nodes = 0;
         Move bestMove = Move.NullMove;
         for(int depth = 1; depth <= 50; depth++) {
             int score = Search(board, timer, -30000, 30000, depth, 0);
