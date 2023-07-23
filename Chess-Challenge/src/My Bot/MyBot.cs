@@ -97,7 +97,7 @@ public class MyBot : IChessBot
         Move bestMove = Move.NullMove;
         int origAlpha = alpha;
         for(int i = 0; i < moves.Length; i++) {
-            if(timer.MillisecondsElapsedThisTurn >= timer.MillisecondsRemaining / 30) return 0;
+            if(timer.MillisecondsElapsedThisTurn >= timer.MillisecondsRemaining / 30) return 30000;
 
             int ind = i;
             for(int j = i + 1; j < moves.Length; j++) {
