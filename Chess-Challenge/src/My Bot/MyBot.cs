@@ -66,6 +66,13 @@ public class MyBot : IChessBot
             if(best > alpha) alpha = best;
         }
 
+        if(depth >= 3 && beta - alpha > 1 && board.TrySkipTurn()) {
+            int score = -Search(board, timer, -beta, -beta + 1, depth - 3, ply + 1);
+            board.UndoSkipTurn();
+            if(score >= beta)
+                return score;
+        }
+
         TTEntry entry = tt[key % entries];
         Move[] moves = board.GetLegalMoves(qsearch);
         int[] scores = new int[moves.Length];
@@ -108,13 +115,14 @@ public class MyBot : IChessBot
     }
     public Move Think(Board board, Timer timer)
     {
+        nodes = 0;
         Move bestMove = Move.NullMove;
         for(int depth = 1; depth <= 50; depth++) {
             int score = Search(board, timer, -30000, 30000, depth, 0);
             if(timer.MillisecondsElapsedThisTurn >= timer.MillisecondsRemaining / 30)
                 break;
-            /*if(timer.MillisecondsElapsedThisTurn != 0)
-                Console.WriteLine($"info depth {depth} score cp {score} time {timer.MillisecondsElapsedThisTurn} pv {bestmoveRoot} nodes {nodes} nps {nodes * 1000 / (ulong)timer.MillisecondsElapsedThisTurn}");*/
+            if(timer.MillisecondsElapsedThisTurn != 0)
+                Console.WriteLine($"info depth {depth} score cp {score} time {timer.MillisecondsElapsedThisTurn} pv {bestmoveRoot} nodes {nodes} nps {nodes * 1000 / (ulong)timer.MillisecondsElapsedThisTurn}");
             bestMove = bestmoveRoot;
         }
         return bestMove;
