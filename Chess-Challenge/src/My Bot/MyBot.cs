@@ -56,7 +56,7 @@ public class MyBot : IChessBot
         bool notRoot = (ply > 0);
         int best = -30000;
 
-        if(ply > 0) {
+        if(notRoot) {
             for(int i = board.PlyCount - 2; i >= 0; i -= 2) {
                 if(hashStack[i] == hashStack[board.PlyCount])
                     return 0;
@@ -77,7 +77,7 @@ public class MyBot : IChessBot
             if(best > alpha) alpha = best;
         }
 
-        else if (!board.IsInCheck() && depth <= 6 && evl - 100*depth >= beta) return evl;
+        else if (notRoot && !board.IsInCheck() && depth <= 6 && evl - 100*depth >= beta) return evl;
         
         if (depth >= 3 && notRoot && board.TrySkipTurn()) {
             int score = -Search(board, timer, -beta, -beta + 1, depth - 3, ply + 1);
