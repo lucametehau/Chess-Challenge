@@ -1,4 +1,4 @@
-using ChessChallenge.API;
+﻿using ChessChallenge.API;
 using System;
 
 public class MyBot : IChessBot
@@ -53,6 +53,7 @@ public class MyBot : IChessBot
         ulong key = board.ZobristKey;
         hashStack[board.PlyCount] = key;
         bool qsearch = (depth <= 0);
+        bool notRoot = (ply > 0);
         int best = -30000;
 
         if(ply > 0) {
@@ -64,7 +65,7 @@ public class MyBot : IChessBot
 
         TTEntry entry = tt[key % entries];
 
-        if(ply > 0 && entry.key == key && entry.depth >= depth && 
+        if(notRoot && entry.key == key && entry.depth >= depth &&
         (entry.bound == 3 || (entry.bound == 2 && entry.score >= beta) || (entry.bound == 1 && entry.score <= alpha)))
             return entry.score;
 
