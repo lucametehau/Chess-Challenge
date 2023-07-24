@@ -21,6 +21,7 @@ public class MyBot : IChessBot
     const int entries = (1 << 20);
     ulong nodes = 0;
     TTEntry[] tt = new TTEntry[entries];
+    Move[] killer = new Move[100];
 
     public int getPstVal(int psq) {
         return (int)(((psts[psq / 10] >> (6 * (psq % 10))) & 63) - 20) * 8;
@@ -88,7 +89,8 @@ public class MyBot : IChessBot
         for(int i = 0; i < moves.Length; i++) {
             Move move = moves[i];
             if(move == entry.move) scores[i] = 1000000;
-            else if(move.IsCapture) scores[i] = 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+            else if(move.IsCapture) scores[i] = 100000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+            else if(move == killer[ply]) scores[i] = 10000;
         }
 
         Move bestMove = Move.NullMove;
@@ -111,7 +113,11 @@ public class MyBot : IChessBot
                 if(ply == 0)
                     bestmoveRoot = move;
                 alpha = Math.Max(alpha, score);
-                if(alpha >= beta) break;
+                if(alpha >= beta) {
+                    if(!move.IsCapture)
+                        killer[ply] = move;
+                    break;
+                }
             }
         }
         if(!qsearch && moves.Length == 0) {
