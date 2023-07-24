@@ -34,7 +34,7 @@ public class MyBot : IChessBot
                 ulong mask = board.GetPieceBitboard(p, stm);
                 while(mask != 0) {
                     phase += piecePhase[piece];
-                    ind = 128 * (piece - 1) + BitboardHelper.ClearAndGetIndexOfLSB(ref mask) ^ (stm == true ? 56 : 0);
+                    ind = 128 * (piece - 1) + BitboardHelper.ClearAndGetIndexOfLSB(ref mask) ^ (stm ? 56 : 0);
                     mg += getPstVal(ind) + pieceVal[piece];
                     eg += getPstVal(ind + 64) + pieceVal[piece];
                 }
@@ -43,10 +43,7 @@ public class MyBot : IChessBot
             eg = -eg;
         }
 
-        int eval = (mg * phase + eg * (24 - phase)) / 24;
-        if(!board.IsWhiteToMove)
-            eval *= -1;
-        return eval;
+        return (mg * phase + eg * (24 - phase)) / 24 * (board.IsWhiteToMove ? 1 : -1);
     }
     public int Search(Board board, Timer timer, int alpha, int beta, int depth, int ply) {
         nodes++;
@@ -58,7 +55,7 @@ public class MyBot : IChessBot
 
         if(notRoot) {
             for(int i = board.PlyCount - 2; i >= 0; i -= 2) {
-                if(hashStack[i] == hashStack[board.PlyCount])
+                if(hashStack[i] == key)
                     return 0;
             }
         }
@@ -66,18 +63,17 @@ public class MyBot : IChessBot
         TTEntry entry = tt[key % entries];
 
         if(notRoot && entry.key == key && entry.depth >= depth &&
-        (entry.bound == 3 || (entry.bound == 2 && entry.score >= beta) || (entry.bound == 1 && entry.score <= alpha)))
+        (entry.bound == 3 || entry.bound == 2 && entry.score >= beta || entry.bound == 1 && entry.score <= alpha))
             return entry.score;
 
-        int evl = Evaluate(board);
+        int eval = Evaluate(board);
         
         if(qsearch) {
-            best = evl;
+            best = eval;
             if(best >= beta) return best;
-            if(best > alpha) alpha = best;
+            alpha = Math.Max(alpha, best);
         }
-
-        else if (notRoot && !board.IsInCheck() && depth <= 6 && evl - 100*depth >= beta) return evl;
+        else if (notRoot && !board.IsInCheck() && depth <= 6 && eval - 100 * depth >= beta) return eval;
         
         if (depth >= 3 && notRoot && board.TrySkipTurn()) {
             int score = -Search(board, timer, -beta, -beta + 1, depth - 3, ply + 1);
@@ -88,10 +84,11 @@ public class MyBot : IChessBot
         
         Move[] moves = board.GetLegalMoves(qsearch);
         int[] scores = new int[moves.Length];
-
+        
         for(int i = 0; i < moves.Length; i++) {
-            if(moves[i] == entry.move) scores[i] = 1000000;
-            else if(moves[i].IsCapture) scores[i] = 100 * (int)board.GetPiece(moves[i].TargetSquare).PieceType - (int)board.GetPiece(moves[i].StartSquare).PieceType;
+            Move move = moves[i];
+            if(move == entry.move) scores[i] = 1000000;
+            else if(move.IsCapture) scores[i] = 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
         }
 
         Move bestMove = Move.NullMove;
@@ -99,12 +96,10 @@ public class MyBot : IChessBot
         for(int i = 0; i < moves.Length; i++) {
             if(timer.MillisecondsElapsedThisTurn >= timer.MillisecondsRemaining / 30) return 30000;
 
-            int ind = i;
             for(int j = i + 1; j < moves.Length; j++) {
-                if(scores[j] > scores[ind]) ind = j;
+                if(scores[j] > scores[i])
+                    (scores[i], scores[j], moves[i], moves[j]) = (scores[j], scores[i], moves[j], moves[i]);
             }
-            (scores[i], scores[ind]) = (scores[ind], scores[i]);
-            (moves[i], moves[ind]) = (moves[ind], moves[i]);
 
             Move move = moves[i];
             board.MakeMove(move);
@@ -115,10 +110,8 @@ public class MyBot : IChessBot
                 bestMove = move;
                 if(ply == 0)
                     bestmoveRoot = move;
-                if(score > alpha) {
-                    alpha = score;
-                    if(alpha >= beta) break;
-                }
+                alpha = Math.Max(alpha, score);
+                if(alpha >= beta) break;
             }
         }
         if(!qsearch && moves.Length == 0) {
@@ -131,15 +124,13 @@ public class MyBot : IChessBot
     public Move Think(Board board, Timer timer)
     {
         nodes = 0;
-        Move bestMove = Move.NullMove;
         for(int depth = 1; depth <= 50; depth++) {
             int score = Search(board, timer, -30000, 30000, depth, 0);
             if(timer.MillisecondsElapsedThisTurn >= timer.MillisecondsRemaining / 30)
                 break;
             /*if(timer.MillisecondsElapsedThisTurn != 0)
                 Console.WriteLine($"info depth {depth} score cp {score} time {timer.MillisecondsElapsedThisTurn} pv {bestmoveRoot} nodes {nodes} nps {nodes * 1000 / (ulong)timer.MillisecondsElapsedThisTurn}");*/
-            bestMove = bestmoveRoot;
         }
-        return bestMove;
+        return bestmoveRoot;
     }
 }
