@@ -52,6 +52,7 @@ public class MyBot : IChessBot
         hashStack[board.PlyCount] = key;
         bool qsearch = (depth <= 0);
         bool notRoot = (ply > 0);
+        bool pv = (beta - alpha > 1);
         int best = -30000;
 
         if(notRoot) {
@@ -105,7 +106,15 @@ public class MyBot : IChessBot
 
             Move move = moves[i];
             board.MakeMove(move);
-            int score = -Search(board, timer, -beta, -alpha, depth - 1, ply + 1);
+            int score = 0;
+            bool did_zw = false;
+
+            if(i > 3 && depth >= 3) {
+                score = -Search(board, timer, -alpha - 1, -alpha, depth - 2, ply + 1); 
+                did_zw = true;
+            }
+            if(!did_zw || score > alpha && pv) score = -Search(board, timer, -beta, -alpha, depth - 1, ply + 1);
+
             board.UndoMove(move);
             if(score > best) {
                 best = score;
@@ -134,8 +143,8 @@ public class MyBot : IChessBot
             int score = Search(board, timer, -30000, 30000, depth, 0);
             if(timer.MillisecondsElapsedThisTurn >= timer.MillisecondsRemaining / 30)
                 break;
-            /*if(timer.MillisecondsElapsedThisTurn != 0)
-                Console.WriteLine($"info depth {depth} score cp {score} time {timer.MillisecondsElapsedThisTurn} pv {bestmoveRoot} nodes {nodes} nps {nodes * 1000 / (ulong)timer.MillisecondsElapsedThisTurn}");*/
+            if(timer.MillisecondsElapsedThisTurn != 0)
+                Console.WriteLine($"info depth {depth} score cp {score} time {timer.MillisecondsElapsedThisTurn} pv {bestmoveRoot} nodes {nodes} nps {nodes * 1000 / (ulong)timer.MillisecondsElapsedThisTurn}");
         }
         return bestmoveRoot;
     }
